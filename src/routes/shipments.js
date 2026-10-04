@@ -4,7 +4,22 @@ const { authenticate, authorize } = require('../middlewares/auth');
 
 const STATUSES = ['PENDING', 'SHIPPING', 'DELIVERED', 'CANCELLED'];
 
-router.patch('/:id', authenticate, authorize('ADMIN'), async (req, res) => {
+router.use(authenticate);
+
+// Xem một shipment: ADMIN hoặc chủ đơn hàng
+router.get('/:id', async (req, res) => {
+  const s = await prisma.shipment.findUnique({
+    where: { shipid: Number(req.params.id) },
+    include: { order: true },
+  });
+  if (!s || (req.user.role !== 'ADMIN' && s.order.uid !== req.user.uid)) {
+    return res.status(404).json({ message: 'Không tìm thấy shipment' });
+  }
+  res.json(s);
+});
+
+// Cập nhật trạng thái: chỉ ADMIN
+router.patch('/:id', authorize('ADMIN'), async (req, res) => {
   const { status } = req.body;
   if (!STATUSES.includes(status)) {
     return res

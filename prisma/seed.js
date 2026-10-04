@@ -9,19 +9,13 @@ async function main() {
     create: { rolename: 'ADMIN' },
   });
   await prisma.role.upsert({
-    where: { rolename: 'USER' },
+    where: { rolename: 'normal' },
     update: {},
-    create: { rolename: 'USER' },
+    create: { rolename: 'normal' },
   });
 
   if ((await prisma.membership.count()) === 0) {
-    await prisma.membership.createMany({
-      data: [
-        { mname: 'Bronze', score: 0 },
-        { mname: 'Silver', score: 100 },
-        { mname: 'Gold', score: 500 },
-      ],
-    });
+    await prisma.membership.create({ data: { mname: 'normal', score: 10 } });
   }
 
   await prisma.user.upsert({
@@ -34,15 +28,6 @@ async function main() {
       roleid: admin.roleid,
     },
   });
-
-  if ((await prisma.product.count()) === 0) {
-    await prisma.product.createMany({
-      data: [
-        { pname: 'Áo thun', price: 150000, quantity: 50 },
-        { pname: 'Quần jean', price: 350000, quantity: 30 },
-      ],
-    });
-  }
 
   console.log('Seed xong');
 }

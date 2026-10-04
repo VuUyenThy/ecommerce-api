@@ -16,8 +16,8 @@ router.post('/register', async (req, res) => {
     return res.status(409).json({ message: 'Username đã tồn tại' });
   }
 
-  const role = await prisma.role.findUnique({ where: { rolename: 'USER' } });
-  const lowest = await prisma.membership.findFirst({ orderBy: { score: 'asc' } });
+  const role = await prisma.role.findUnique({ where: { rolename: 'normal' } });
+  const lowest = await prisma.membership.findFirst({ where: { mname: 'normal' } });
 
   const user = await prisma.user.create({
     data: {
@@ -27,7 +27,7 @@ router.post('/register', async (req, res) => {
       roleid: role.roleid,
       mid: lowest ? lowest.mid : null,
     },
-    select: { uid: true, username: true, fullname: true },
+    select: { uid: true, username: true, fullname: true, role: true, membership: true },
   });
   res.status(201).json(user);
 });
