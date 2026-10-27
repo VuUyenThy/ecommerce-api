@@ -5,6 +5,22 @@ const prisma = require('../lib/prisma');
 const { jwtSecret, jwtExpiresIn } = require('../config/env');
 const { authenticate } = require('../middlewares/auth');
 
+async function ensureDefaultNormalProfile() {
+  let role = await prisma.role.findUnique({ where: { rolename: 'normal' } });
+  if (!role) {
+    role = await prisma.role.create({ data: { rolename: 'normal' } });
+  }
+
+  let membership = await prisma.membership.findFirst({ where: { mname: 'normal' } });
+  if (!membership) {
+    membership = await prisma.membership.create({
+      data: { mname: 'normal', score: 10 },
+    });
+  }
+
+  return { role, membership };
+}
+
 router.post('/register', async (req, res) => {
   const { username, fullname, password } = req.body;
   if (!username || !fullname || !password || password.length < 6) {
@@ -16,20 +32,24 @@ router.post('/register', async (req, res) => {
     return res.status(409).json({ message: 'Username đã tồn tại' });
   }
 
-  const role = await prisma.role.findUnique({ where: { rolename: 'normal' } });
-  const lowest = await prisma.membership.findFirst({ where: { mname: 'normal' } });
+  try {
+    const { role, membership } = await ensureDefaultNormalProfile();
 
-  const user = await prisma.user.create({
-    data: {
-      username,
-      fullname,
-      password: await bcrypt.hash(password, 10),
-      roleid: role.roleid,
-      mid: lowest ? lowest.mid : null,
-    },
-    select: { uid: true, username: true, fullname: true, role: true, membership: true },
-  });
-  res.status(201).json(user);
+    const user = await prisma.user.create({
+      data: {
+        username,
+        fullname,
+        password: await bcrypt.hash(password, 10),
+        roleid: role.roleid,
+        mid: membership.mid,
+      },
+      select: { uid: true, username: true, fullname: true, role: true, membership: true },
+    });
+    res.status(201).json(user);
+  } catch (error) {
+    console.error('Register error:', error);
+    res.status(500).json({ message: 'Lỗi hệ thống' });
+  }
 });
 
 router.post('/login', async (req, res) => {

@@ -8,14 +8,16 @@ async function main() {
     update: {},
     create: { rolename: 'ADMIN' },
   });
-  await prisma.role.upsert({
+
+  const normalRole = await prisma.role.upsert({
     where: { rolename: 'normal' },
     update: {},
     create: { rolename: 'normal' },
   });
 
-  if ((await prisma.membership.count()) === 0) {
-    await prisma.membership.create({ data: { mname: 'normal', score: 10 } });
+  let normalMembership = await prisma.membership.findFirst({ where: { mname: 'normal' } });
+  if (!normalMembership) {
+    normalMembership = await prisma.membership.create({ data: { mname: 'normal', score: 10 } });
   }
 
   await prisma.user.upsert({
@@ -26,8 +28,13 @@ async function main() {
       fullname: 'Administrator',
       password: await bcrypt.hash('admin123', 10),
       roleid: admin.roleid,
+      mid: normalMembership.mid,
     },
   });
+
+  if (normalRole && normalMembership) {
+    console.log(`Seed xong: role normal=${normalRole.rolename}, membership normal score=${normalMembership.score}`);
+  }
 
   console.log('Seed xong');
 }
